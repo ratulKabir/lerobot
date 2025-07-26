@@ -31,16 +31,18 @@ def classify_task(future):
     lateral_shift = abs(dy)
     forward_shift = dx
 
-    if speed < 0.5 and forward_shift < 0.5:
-        return "stop"
-    elif lateral_shift > 0.5:
-        return "change lane to right" if dy > 0 else "change lane to left"
-    elif speed - future[0][6] > 0.5:
-        return "accelerate"
-    elif future[0][6] - speed > 0.5:
-        return "decelerate"
+    if speed < 0.5 and forward_shift < 1.0:
+        # return f"stop in approx. {int(forward_shift)} meters" 
+        return f"stop"  
+    elif lateral_shift > 3.0:
+        return "change lane to left" if dy > 0 else "change lane to right"
+    elif speed - future[0][6] > 3.0:
+        # return f"accelerate to approx. {int(speed)}km/h velocity"
+        return f"accelerate"
+    elif future[0][6] - speed > 2.0:
+        return f"decelerate"
     else:
-        return "keep speed"
+        return "keep current speed"
 
 
 def main():
@@ -48,16 +50,29 @@ def main():
     fps = 10
     future_steps = 30
     repo_id = "rat45/carla"
-    root_path = "/carla_lerobot/carla_dataset"
+    root_path = "/carla_lerobot/carla"
     meas_dir = Path("/carla_source/validation_1_scenario/routes_validation/random_weather_seed_2_balanced_150/Town13_Rep0_10_route0_01_11_13_24_48/measurements")
     image_dir = Path("/carla_source/validation_1_scenario/routes_validation/random_weather_seed_2_balanced_150/Town13_Rep0_10_route0_01_11_13_24_48/rgb")  # assumes *.png files like 00000.png
 
     # === FEATURES ===
     features = {
-        "observation.images.top": {"dtype": "video", "shape": [3, 480, 640]},
-        "action": {"dtype": "float32", "shape": (future_steps, 7)},
-        "observation.state": {"dtype": "float32", "shape": (1, 7)},
-    }
+                "observation.images.top": {
+                    "dtype": "video",
+                    "shape": [3, 480, 640],
+                    "names": ["channels", "height", "width"],  # LeRobot expects (C, H, W)
+                },
+                "action": {
+                    "dtype": "float32",
+                    "shape": (future_steps, 7),
+                    "names": ["x", "y", "z", "rx", "ry", "rz", "speed"],
+                },
+                "observation.state": {
+                    "dtype": "float32",
+                    "shape": (1, 7),
+                    "names": ["x", "y", "z", "rx", "ry", "rz", "speed"],
+                },
+            }
+
 
     # === INIT DATASET ===
     dataset = LeRobotDataset.create(
