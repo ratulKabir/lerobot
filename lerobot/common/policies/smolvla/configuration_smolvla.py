@@ -27,8 +27,8 @@ from lerobot.configs.types import FeatureType, NormalizationMode, PolicyFeature
 class SmolVLAConfig(PreTrainedConfig):
     # Input / output structure.
     n_obs_steps: int = 1
-    chunk_size: int = 50
-    n_action_steps: int = 50
+    chunk_size: int = 30
+    n_action_steps: int = 30
 
     normalization_mapping: dict[str, NormalizationMode] = field(
         default_factory=lambda: {
@@ -43,7 +43,7 @@ class SmolVLAConfig(PreTrainedConfig):
     max_action_dim: int = 32
 
     # Image preprocessing
-    resize_imgs_with_padding: tuple[int, int] = (512, 512)
+    resize_imgs_with_padding: tuple[int, int] = (224, 224)
 
     # Add empty images. Used by smolvla_aloha_sim which adds the empty
     # left and right wrist cameras in addition to the top camera.

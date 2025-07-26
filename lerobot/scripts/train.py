@@ -24,6 +24,7 @@ from termcolor import colored
 from torch.amp import GradScaler
 from torch.optim import Optimizer
 
+from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.common.datasets.factory import make_dataset
 from lerobot.common.datasets.sampler import EpisodeAwareSampler
 from lerobot.common.datasets.utils import cycle
@@ -125,7 +126,8 @@ def train(cfg: TrainPipelineConfig):
     torch.backends.cuda.matmul.allow_tf32 = True
 
     logging.info("Creating dataset")
-    dataset = make_dataset(cfg)
+    # dataset = make_dataset(cfg)
+    dataset = LeRobotDataset("rat45/carla", episodes=[0], root="/carla_lerobot/carla_dataset")
 
     # Create environment used for evaluating checkpoints during training on simulation data.
     # On real-world data, no need to create an environment as evaluations are done outside train.py,
