@@ -50,9 +50,10 @@ def main():
     fps = 10
     future_steps = 30
     repo_id = "rat45/carla"
-    root_path = "/carla_lerobot/carla"
+    root_path = "/carla_lerobot/carla_global"
     meas_dir = Path("/carla_source/validation_1_scenario/routes_validation/random_weather_seed_2_balanced_150/Town13_Rep0_10_route0_01_11_13_24_48/measurements")
     image_dir = Path("/carla_source/validation_1_scenario/routes_validation/random_weather_seed_2_balanced_150/Town13_Rep0_10_route0_01_11_13_24_48/rgb")  # assumes *.png files like 00000.png
+    transform_to_ego_frame = False  # or False if you want to keep in global frame
 
     # === FEATURES ===
     features = {
@@ -71,6 +72,10 @@ def main():
                     "shape": (1, 7),
                     "names": ["x", "y", "z", "rx", "ry", "rz", "speed"],
                 },
+                "action_is_padded": {
+                    "dtype": "int64",
+                    "shape": (future_steps,),
+                },
             }
 
 
@@ -82,6 +87,8 @@ def main():
         root=root_path,
         use_videos=True,
     )
+
+    # dataset.metadata["transform_to_ego_frame"] = transform_to_ego_frame
 
     json_files = sorted(meas_dir.glob("*.json.gz"))
     n_frames = len(json_files)
@@ -96,24 +103,39 @@ def main():
 
     for i in tqdm(range(n_frames)):
         # === State ===
-        obs_state = extract_state(all_matrices[i], all_speeds[i])
-        obs_state = torch.tensor(obs_state, dtype=torch.float32).reshape(1, 7)
+        if transform_to_ego_frame:
+            obs_state = torch.tensor([[0, 0, 0, 0, 0, 0, all_speeds[i]]], dtype=torch.float32)
+        else:
+            obs_state = extract_state(all_matrices[i], all_speeds[i])
+            obs_state = torch.tensor(obs_state, dtype=torch.float32).reshape(1, 7)
+
 
         # === Action (future) ===
-        T_i_inv = np.linalg.inv(all_matrices[i])
+        T_i_inv = np.linalg.inv(all_matrices[i]) if transform_to_ego_frame else None
         future = []
+        padding_mask = []
 
         for j in range(i + 1, i + 1 + future_steps):
             if j >= n_frames:
                 future.append([0.0]*7)
+                padding_mask.append(int(True))
             else:
-                T_rel = T_i_inv @ all_matrices[j]
-                pos_rel = T_rel[:3, 3].tolist()
-                rpy_rel = R.from_matrix(T_rel[:3, :3]).as_euler('xyz', degrees=False).tolist()
+                if transform_to_ego_frame:
+                    T_rel = T_i_inv @ all_matrices[j]
+                    pos_rel = T_rel[:3, 3].tolist()
+                    rpy_rel = R.from_matrix(T_rel[:3, :3]).as_euler('xyz', degrees=False).tolist()
+                else:
+                    pos = all_matrices[j][:3, 3].tolist()
+                    rpy = R.from_matrix(all_matrices[j][:3, :3]).as_euler('xyz', degrees=False).tolist()
+
+                    pos_rel = pos
+                    rpy_rel = rpy
                 speed_j = all_speeds[j]
                 future.append(pos_rel + rpy_rel + [speed_j])
+                padding_mask.append(int(False))
 
         future = torch.tensor(future, dtype=torch.float32)
+        padding_mask = torch.tensor(padding_mask, dtype=torch.int64)
 
         # === Image ===
         image_path = image_dir / f"{i:04d}.jpg"
@@ -128,6 +150,7 @@ def main():
             "observation.images.top": image,
             "action": future,
             "observation.state": obs_state,
+            "action_is_padded": padding_mask,
         }
 
         dataset.add_frame(frame, task=task)
