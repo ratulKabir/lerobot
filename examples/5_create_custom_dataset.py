@@ -35,7 +35,7 @@ def classify_task(future):
         # return f"stop in approx. {int(forward_shift)} meters" 
         return f"stop"  
     elif lateral_shift > 3.0:
-        return "change lane to left" if dy > 0 else "change lane to right"
+        return "change lane to right" if dy > 0 else "change lane to left"
     elif speed - future[0][6] > 3.0:
         # return f"accelerate to approx. {int(speed)}km/h velocity"
         return f"accelerate"
