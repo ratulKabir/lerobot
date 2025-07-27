@@ -54,12 +54,22 @@ def project_to_image(points_ego, ego_to_camera, intrinsics):
 
 
 # === Visualize Predicted and Ground Truth Actions ===
-def veirfy_action(predicted_action, ground_truth_action, ego_to_camera, idx, intrinsics):
+def veirfy_action(predicted_action, ground_truth_action, ego_to_camera, idx, intrinsics, task_gt="", task_eval=""):
     img_path = RGB_DIR / f"{idx:04d}.jpg"
     image = cv2.imread(str(img_path))
     if image is None:
         print(f"Image not found: {img_path}")
         return
+    
+    # === Extract speeds from the first step ===
+    speed_gt = ground_truth_action[0, 0, 6].item()
+    speed_pred = predicted_action[0, 0, 6].item()
+
+    # === Prepare text strings ===
+    text_speed_gt = f"GT speed: {speed_gt:.2f} km/h"
+    text_speed_pred = f"Pred speed: {speed_pred:.2f} km/h"
+    text_task_gt = f"GT task: {task_gt}"
+    text_task_pred = f"Eval task: {task_eval}"
 
     pred_np = predicted_action.squeeze(0).cpu().numpy()[:, :3]
     gt_np = ground_truth_action.squeeze(0).cpu().numpy()[:, :3]
@@ -67,14 +77,30 @@ def veirfy_action(predicted_action, ground_truth_action, ego_to_camera, idx, int
     pred_px = project_to_image(pred_np, ego_to_camera, intrinsics)
     gt_px = project_to_image(gt_np, ego_to_camera, intrinsics)
 
+    # === Draw points ===
     for pt in gt_px:
         cv2.circle(image, tuple(pt.astype(int)), 4, (0, 255, 0), -1)  # Green = Ground Truth
     for pt in pred_px:
         cv2.circle(image, tuple(pt.astype(int)), 4, (0, 0, 255), -1)  # Red = Predicted
 
+    # === Top-left: stacked GT and Pred speed ===
+    y_base = 40
+    cv2.putText(image, text_speed_gt, (20, y_base), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+    cv2.putText(image, text_speed_pred, (20, y_base + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
+
+    # === Top-right: stacked GT and Pred task ===
+    text_size_gt = cv2.getTextSize(text_task_gt, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+    text_size_pred = cv2.getTextSize(text_task_pred, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+    x_right = image.shape[1] - max(text_size_gt[0], text_size_pred[0]) - 20
+
+    cv2.putText(image, text_task_gt, (x_right, y_base), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+    cv2.putText(image, text_task_pred, (x_right, y_base + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
+
+    # === Save ===
     save_path = f"outputs/eval/smol_vla_carla/jpgs/{idx:04d}.jpg"
     cv2.imwrite(str(save_path), image)
     print(f"Saved visualization: {save_path}")
+
 
 # === Main Pipeline ===
 def main():
@@ -111,7 +137,8 @@ def main():
                     batch[key] = batch[key].to(device, non_blocking=True)
 
             _, actions = policy.select_action(batch)
-            veirfy_action(actions, batch["action"], ego_to_camera, index, intrinsics)
+            task_gt = task_eval = batch["task"]
+            veirfy_action(actions, batch["action"], ego_to_camera, index, intrinsics, task_gt, task_eval)
             index += 1
 
 if __name__ == "__main__":
