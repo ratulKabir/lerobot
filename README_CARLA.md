@@ -31,7 +31,7 @@ Training and evaluation results are saved in the `outputs` folder.
 
 See my result below:
 
-<video src="media/carla/output_video_corrected.mp4" controls width="600"></video>
+![Demo](media/carla/output_video_corrected.gif)
 
 ## TODOs
 
