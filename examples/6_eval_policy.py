@@ -97,7 +97,7 @@ def veirfy_action(predicted_action, ground_truth_action, ego_to_camera, idx, int
     cv2.putText(image, text_task_pred, (x_right, y_base + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
 
     # === Save ===
-    save_path = f"outputs/eval/smol_vla_carla/jpgs/{idx:04d}.jpg"
+    save_path = f"outputs/eval/smol_vla_carla_test/jpgs/{idx:04d}.jpg"
     cv2.imwrite(str(save_path), image)
     print(f"Saved visualization: {save_path}")
 
@@ -131,13 +131,15 @@ def main():
     # === Inference Loop ===
     index = 0
     for batch in dataloader:
+        task_gt = batch["task"]
         with torch.inference_mode():
             for key in batch:
                 if isinstance(batch[key], torch.Tensor):
                     batch[key] = batch[key].to(device, non_blocking=True)
 
+            batch["task"][0] = 'change lane to left'
             _, actions = policy.select_action(batch)
-            task_gt = task_eval = batch["task"]
+            task_eval = batch["task"]
             veirfy_action(actions, batch["action"], ego_to_camera, index, intrinsics, task_gt, task_eval)
             index += 1
 

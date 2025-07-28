@@ -19,7 +19,8 @@ def extract_state(matrix, speed):
     rpy = R.from_matrix(rot).as_euler('xyz', degrees=False).tolist()
     return pos + rpy + [speed]
 
-def classify_task(future):
+# TODO: consider padding during classification
+def classify_task(future, padding_mask):
     """
     future: np.ndarray of shape [N, 7] → [pos_x, pos_y, pos_z, roll, pitch, yaw, speed]
     """
@@ -143,7 +144,7 @@ def main():
         image = torch.from_numpy(np.array(image)).permute(2, 0, 1)  # [3, H, W]
 
         # === Classify Task ===
-        task = classify_task(future)
+        task = classify_task(future, padding_mask)
         
         # === Frame ===
         frame = {

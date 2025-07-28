@@ -402,29 +402,29 @@ class SmolVLAPolicy(PreTrainedPolicy):
         self._queues = populate_queues(self._queues, batch, exclude_keys=[ACTION])
         # Action queue logic for n_action_steps > 1. When the action_queue is depleted, populate it by
         # querying the policy.
-        if len(self._queues[ACTION]) == 0:
+        # if len(self._queues[ACTION]) == 0:
             # for k in batch:
             #     if k in self._queues:
             #         batch[k] = torch.stack(list(self._queues[k]), dim=1)
-            images, img_masks = self.prepare_images(batch)
-            state = self.prepare_state(batch)
-            lang_tokens, lang_masks = self.prepare_language(batch)
+        images, img_masks = self.prepare_images(batch)
+        state = self.prepare_state(batch)
+        lang_tokens, lang_masks = self.prepare_language(batch)
 
-            actions = self.model.sample_actions(
-                images, img_masks, lang_tokens, lang_masks, state, noise=noise
-            )
-            # Unpad actions
-            original_action_dim = self.config.action_feature.shape[-1]
-            actions = actions[:, :, :original_action_dim]
+        actions = self.model.sample_actions(
+            images, img_masks, lang_tokens, lang_masks, state, noise=noise
+        )
+        # Unpad actions
+        original_action_dim = self.config.action_feature.shape[-1]
+        actions = actions[:, :, :original_action_dim]
 
-            actions = self.unnormalize_outputs({"action": actions})["action"]
+        actions = self.unnormalize_outputs({"action": actions})["action"]
 
-            if self.config.adapt_to_pi_aloha:
-                actions = self._pi_aloha_encode_actions(actions)
+        if self.config.adapt_to_pi_aloha:
+            actions = self._pi_aloha_encode_actions(actions)
 
-            # `self.model.forward` returns a (batch_size, n_action_steps, action_dim) tensor, but the queue
-            # effectively has shape (n_action_steps, batch_size, *), hence the transpose.
-            self._queues[ACTION].extend(actions.transpose(0, 1)[: self.config.n_action_steps])
+        # `self.model.forward` returns a (batch_size, n_action_steps, action_dim) tensor, but the queue
+        # effectively has shape (n_action_steps, batch_size, *), hence the transpose.
+        self._queues[ACTION].extend(actions.transpose(0, 1)[: self.config.n_action_steps])
         return self._queues[ACTION].popleft(), actions
 
     def forward(self, batch: dict[str, Tensor], noise=None, time=None) -> dict[str, Tensor]:
