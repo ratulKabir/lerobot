@@ -79,13 +79,13 @@ def veirfy_action(predicted_action, ground_truth_action, ego_to_camera, idx, int
 
     # === Draw points ===
     for pt in gt_px:
-        cv2.circle(image, tuple(pt.astype(int)), 4, (0, 255, 0), -1)  # Green = Ground Truth
+        cv2.circle(image, tuple(pt.astype(int)), 4, (0, 128, 0), -1)  # Green = Ground Truth
     for pt in pred_px:
         cv2.circle(image, tuple(pt.astype(int)), 4, (0, 0, 255), -1)  # Red = Predicted
 
     # === Top-left: stacked GT and Pred speed ===
     y_base = 40
-    cv2.putText(image, text_speed_gt, (20, y_base), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+    cv2.putText(image, text_speed_gt, (20, y_base), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 128, 0), 2, cv2.LINE_AA)
     cv2.putText(image, text_speed_pred, (20, y_base + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
 
     # === Top-right: stacked GT and Pred task ===
@@ -93,11 +93,11 @@ def veirfy_action(predicted_action, ground_truth_action, ego_to_camera, idx, int
     text_size_pred = cv2.getTextSize(text_task_pred, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
     x_right = image.shape[1] - max(text_size_gt[0], text_size_pred[0]) - 20
 
-    cv2.putText(image, text_task_gt, (x_right, y_base), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2, cv2.LINE_AA)
+    cv2.putText(image, text_task_gt, (x_right, y_base), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 128, 0), 2, cv2.LINE_AA)
     cv2.putText(image, text_task_pred, (x_right, y_base + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
 
     # === Save ===
-    save_path = f"outputs/eval/smol_vla_carla_test/jpgs/{idx:04d}.jpg"
+    save_path = f"outputs/eval/smol_vla_carla/jpgs/{idx:04d}.jpg"
     cv2.imwrite(str(save_path), image)
     print(f"Saved visualization: {save_path}")
 
@@ -131,15 +131,18 @@ def main():
     # === Inference Loop ===
     index = 0
     for batch in dataloader:
-        task_gt = batch["task"]
+        # task_gt = batch["task"]
         with torch.inference_mode():
             for key in batch:
                 if isinstance(batch[key], torch.Tensor):
                     batch[key] = batch[key].to(device, non_blocking=True)
-
-            batch["task"][0] = 'change lane to left'
             _, actions = policy.select_action(batch)
-            task_eval = batch["task"]
+            # TODO: fix wrong data generation in the dataset generation script
+            if batch["task"][0] == 'change lane to left':
+                batch["task"][0] = 'change lane to right'
+            elif batch["task"][0] == 'stop':
+                batch["task"][0] = 'keep current speed'
+            task_gt = task_eval = batch["task"]
             veirfy_action(actions, batch["action"], ego_to_camera, index, intrinsics, task_gt, task_eval)
             index += 1
 
