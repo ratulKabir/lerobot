@@ -1,0 +1,24 @@
+{
+  "name": "lerobot-dev",
+  "image": "ratulkabir/lerobot-ratul:custom_changes",
+  "containerName": "lerobot_container",
+  "workspaceFolder": "/lerobot",
+  "runArgs": [
+    "--gpus", "all",
+    "--shm-size=12g",
+    "--dns=8.8.8.8"
+  ],
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/lerobot,type=bind",
+    "source=/home/ratul/Workstation/ratul/database/lerobot/carla_lerobot,target=/carla_lerobot,type=bind",
+    "source=/home/ratul/Workstation/ratul/simlingo/database/simlingo_1_data/data/simlingo/,target=/carla_source,type=bind"
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.linux": "bash"
+  },
+  "extensions": [
+    "ms-python.python",
+    "ms-toolsai.jupyter"
+  ],
+  "updateRemoteUserUID": false
+}
