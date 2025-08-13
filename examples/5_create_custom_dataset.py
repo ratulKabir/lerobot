@@ -9,6 +9,10 @@ from scipy.spatial.transform import Rotation as R
 
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 
+CREATE_NEW_DATASET = False  # Set to False if you want to use an existing dataset
+ROOT_PATH = "/carla_lerobot/carla"
+
+
 def load_json_gz(file_path):
     with gzip.open(file_path, 'rt', encoding='utf-8') as f:
         return json.load(f)
@@ -51,9 +55,9 @@ def main():
     fps = 10
     future_steps = 30
     repo_id = "rat45/carla"
-    root_path = "/carla_lerobot/carla_global"
-    meas_dir = Path("/carla_source/validation_1_scenario/routes_validation/random_weather_seed_2_balanced_150/Town13_Rep0_10_route0_01_11_13_24_48/measurements")
-    image_dir = Path("/carla_source/validation_1_scenario/routes_validation/random_weather_seed_2_balanced_150/Town13_Rep0_10_route0_01_11_13_24_48/rgb")  # assumes *.png files like 00000.png
+    root_path = ROOT_PATH
+    meas_dir = Path("/carla_source/training_1_scenario/routes_training/random_weather_seed_1_balanced_150/Town12_Rep0_1140_route0_01_11_14_14_40/measurements")
+    image_dir = Path("/carla_source/training_1_scenario/routes_training/random_weather_seed_1_balanced_150/Town12_Rep0_1140_route0_01_11_14_14_40/rgb")  # assumes *.png files like 00000.png
     transform_to_ego_frame = False  # or False if you want to keep in global frame
 
     # === FEATURES ===
@@ -81,13 +85,16 @@ def main():
 
 
     # === INIT DATASET ===
-    dataset = LeRobotDataset.create(
-        repo_id=repo_id,
-        fps=fps,
-        features=features,
-        root=root_path,
-        use_videos=True,
-    )
+    if CREATE_NEW_DATASET:
+        dataset = LeRobotDataset.create(
+            repo_id=repo_id,
+            fps=fps,
+            features=features,
+            root=root_path,
+            use_videos=True,
+        )
+    else:
+        dataset = LeRobotDataset("rat45/carla", root="/carla_lerobot/carla")
 
     # dataset.metadata["transform_to_ego_frame"] = transform_to_ego_frame
 
